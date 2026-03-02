@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNS & DHCP — Sysadmin Beginner Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">Module 3 · Sysadmin Training</div>
+    <h1><span class="dns">DNS</span> &amp; <span class="dhcp">DHCP</span><br>in Active Directory</h1>
+    <p class="subtitle">// a complete beginner's walkthrough</p>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab(0)">🌐 DNS Basics</div>
+    <div class="tab" onclick="showTab(1)">📋 A Records</div>
+    <div class="tab" onclick="showTab(2)">📦 Install DHCP</div>
+    <div class="tab" onclick="showTab(3)">🏊 IP Pool</div>
+    <div class="tab" onclick="showTab(4)">✅ Authorize DHCP</div>
+  </div>
+
+  <!-- SECTION 0: DNS Basics -->
+  <div class="section active" id="s0">
+    <div class="section-header">
+      <div class="section-icon icon-blue">🌐</div>
+      <div>
+        <h2>How DNS Works in Active Directory</h2>
+        <p style="margin:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted)">Domain Name System — the phonebook of your network</p>
+      </div>
+    </div>
+
+    <div class="card highlight-blue">
+      <h3 style="margin-top:0">What is DNS?</h3>
+      <p>DNS = <strong>Domain Name System</strong>. Computers talk to each other using <strong>IP addresses</strong> (like 192.168.1.10), but humans remember <strong>names</strong> (like SERVER01 or google.com). DNS is the translator between the two.</p>
+      <p>Think of it like your phone's contacts list. You tap "Mom" — your phone looks up her number and calls it. DNS does the same: you type <code style="color:var(--accent); font-family:'JetBrains Mono',monospace">SERVER01</code>, your computer asks DNS, DNS replies "that's 192.168.1.10", and your computer connects.</p>
+    </div>
+
+    <h3>Why DNS is Critical in Active Directory</h3>
+    <p>In a Windows domain, DNS is not optional — it is the backbone of the entire AD structure. When you install Active Directory, DNS gets installed automatically alongside it. Here's why:</p>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">Domain Join</div>
+        <div class="value" style="font-size:13px; color:var(--text)">Computers find the Domain Controller via DNS</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Login</div>
+        <div class="value" style="font-size:13px; color:var(--text)">When you log in, DNS locates the DC to authenticate</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Group Policy</div>
+        <div class="value" style="font-size:13px; color:var(--text)">Clients use DNS to find sysvol/netlogon shares</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Replication</div>
+        <div class="value" style="font-size:13px; color:var(--text)">DCs find each other via DNS to sync data</div>
+      </div>
+    </div>
+
+    <h3>How DNS Resolution Works (Step by Step)</h3>
+    <p>When your computer needs to resolve a name like <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">fileserver.company.local</code>:</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-label">Your PC</div>
+        <div class="step-desc">Checks its own cache first</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-label">DNS Server</div>
+        <div class="step-desc">(your DC) receives query</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div class="step-label">Zone Lookup</div>
+        <div class="step-desc">Checks company.local zone</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div class="step-label">Returns IP</div>
+        <div class="step-desc">192.168.1.20</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div class="step-label">Connected!</div>
+        <div class="step-desc">Your PC connects</div>
+      </div>
+    </div>
+
+    <h3>DNS Zones — What Are They?</h3>
+    <p>A <strong>DNS Zone</strong> is like a folder that holds all the records for a domain. When you install AD with domain <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">company.local</code>, a zone called <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">company.local</code> is automatically created.</p>
+
+    <table>
+      <tr><th>Zone Type</th><th>What It Does</th><th>Example</th></tr>
+      <tr><td><span class="mono">Forward Lookup Zone</span></td><td>Converts Name → IP</td><td>fileserver → 192.168.1.20</td></tr>
+      <tr><td><span class="mono">Reverse Lookup Zone</span></td><td>Converts IP → Name</td><td>192.168.1.20 → fileserver</td></tr>
+    </table>
+
+    <div class="tip">
+      <strong>💡 Beginner Tip:</strong> The DNS server in a Windows AD domain is almost always your Domain Controller itself. When you set up client PCs, their DNS setting should point to the DC's IP address — never to 8.8.8.8 (Google) as the primary DNS, or domain joining will fail.
+    </div>
+
+    <h3>Common DNS Record Types</h3>
+    <table>
+      <tr><th>Record</th><th>Full Name</th><th>Purpose</th></tr>
+      <tr><td><span class="mono">A</span></td><td>Address</td><td>Maps a hostname to an IPv4 address</td></tr>
+      <tr><td><span class="mono">AAAA</span></td><td>Quad-A</td><td>Maps a hostname to an IPv6 address</td></tr>
+      <tr><td><span class="mono">CNAME</span></td><td>Alias</td><td>Makes one name point to another name</td></tr>
+      <tr><td><span class="mono">PTR</span></td><td>Pointer</td><td>Reverse lookup (IP → name)</td></tr>
+      <tr><td><span class="mono">SRV</span></td><td>Service</td><td>AD uses these extensively to find DCs</td></tr>
+      <tr><td><span class="mono">MX</span></td><td>Mail Exchange</td><td>Points to mail servers</td></tr>
+    </table>
+  </div>
+
+  <!-- SECTION 1: A Records -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="section-icon icon-blue">📋</div>
+      <div>
+        <h2>Creating A Records Manually</h2>
+        <p style="margin:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted)">Map hostnames to IP addresses</p>
+      </div>
+    </div>
+
+    <div class="card highlight-blue">
+      <h3 style="margin-top:0">What Is an A Record?</h3>
+      <p>An <strong>A record</strong> (Address record) is the most basic DNS record. It simply says: <em>"This name lives at this IP address."</em></p>
+      <p>Example: <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">PRINTER01</code> → <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">192.168.1.50</code></p>
+      <p>Without this record, other computers can't find PRINTER01 by name — they'd have to type the IP address directly every time.</p>
+    </div>
+
+    <h3>When Do You Create A Records Manually?</h3>
+    <p>Computers that join the domain usually register their own A records automatically. But you create them manually for devices that <strong>can't do this themselves</strong>:</p>
+    <div class="info-grid">
+      <div class="info-item"><div class="label">Network Printers</div><div class="value" style="font-size:12px; color:#94a3b8">Don't join the domain</div></div>
+      <div class="info-item"><div class="label">NAS Devices</div><div class="value" style="font-size:12px; color:#94a3b8">Linux-based, no AD agent</div></div>
+      <div class="info-item"><div class="label">IP Cameras</div><div class="value" style="font-size:12px; color:#94a3b8">Simple embedded devices</div></div>
+      <div class="info-item"><div class="label">Web Servers</div><div class="value" style="font-size:12px; color:#94a3b8">Might need custom names</div></div>
+    </div>
+
+    <h3>Method 1 — Using DNS Manager (GUI)</h3>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num-badge blue">1</div>
+        <div class="step-content">
+          <h4>Open DNS Manager</h4>
+          <p>On your Domain Controller: Start → Windows Administrative Tools → DNS. Or press Win+R and type <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">dnsmgmt.msc</code></p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge blue">2</div>
+        <div class="step-content">
+          <h4>Navigate to Your Zone</h4>
+          <p>Expand your server name → Forward Lookup Zones → click your domain (e.g., <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">company.local</code>)</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge blue">3</div>
+        <div class="step-content">
+          <h4>Create New Host (A) Record</h4>
+          <p>Right-click on your zone → <strong>New Host (A or AAAA)...</strong></p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge blue">4</div>
+        <div class="step-content">
+          <h4>Fill in the Details</h4>
+          <p>Enter: <strong>Name:</strong> PRINTER01 &nbsp;|&nbsp; <strong>IP Address:</strong> 192.168.1.50. Tick "Create associated PTR record" if you want reverse lookup too. Click <strong>Add Host</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Method 2 — Using PowerShell (Faster!)</h3>
+    <div class="code-label">PowerShell — Run as Administrator on DC</div>
+    <div class="code-block">
+      <span class="comment"># Add a single A record</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Add-DnsServerResourceRecordA</span> <span class="keyword">-ZoneName</span> <span class="string">"company.local"</span> <span class="keyword">-Name</span> <span class="string">"PRINTER01"</span> <span class="keyword">-IPv4Address</span> <span class="string">"192.168.1.50"</span><br><br>
+      <span class="comment"># Verify it was created</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Resolve-DnsName</span> <span class="string">"PRINTER01.company.local"</span><br><br>
+      <span class="comment"># List all A records in a zone</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Get-DnsServerResourceRecord</span> <span class="keyword">-ZoneName</span> <span class="string">"company.local"</span> <span class="keyword">-RRType</span> <span class="string">"A"</span>
+    </div>
+
+    <h3>Testing Your A Record</h3>
+    <div class="code-label">Command Prompt — From any PC on the network</div>
+    <div class="code-block">
+      <span class="comment"># Test DNS resolution (basic)</span><br>
+      <span class="prompt">C:\></span> <span class="cmd">ping PRINTER01</span><br><br>
+      <span class="comment"># Detailed DNS lookup</span><br>
+      <span class="prompt">C:\></span> <span class="cmd">nslookup PRINTER01</span><br><br>
+      <span class="comment"># If it resolves, you'll see something like:</span><br>
+      <span class="comment"># Server: DC01.company.local</span><br>
+      <span class="comment"># Address: 192.168.1.1</span><br>
+      <span class="comment"># Name: PRINTER01.company.local</span><br>
+      <span class="comment"># Address: 192.168.1.50</span>
+    </div>
+
+    <div class="warn">
+      <strong>⚠️ Common Mistake:</strong> If you create an A record but the device has a different IP than what you entered, DNS will point to the wrong place. Always double-check the IP before creating the record. For devices that might change IPs, use DHCP reservations (covered in the next section!).
+    </div>
+  </div>
+
+  <!-- SECTION 2: Install DHCP -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <div class="section-icon icon-orange">📦</div>
+      <div>
+        <h2>Installing the DHCP Server Role</h2>
+        <p style="margin:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted)">Automate IP address assignment across your network</p>
+      </div>
+    </div>
+
+    <div class="card highlight-orange">
+      <h3 style="margin-top:0; color:var(--accent2)">What is DHCP?</h3>
+      <p><strong>DHCP = Dynamic Host Configuration Protocol.</strong> Without DHCP, you would have to manually set an IP address on every single computer, printer, and device on your network. With DHCP, devices connect to the network and <em>automatically receive</em> an IP address, subnet mask, gateway, and DNS server.</p>
+      <p>Think of DHCP as a hotel receptionist. You arrive (connect to network), they assign you a room (IP address), give you a key card (configuration), and tell you when checkout is (lease time). If you come back tomorrow, you might get the same room or a different one.</p>
+    </div>
+
+    <h3 style="color:var(--accent2)">What DHCP Gives a Client Device</h3>
+    <table>
+      <tr><th>Setting</th><th>Example</th><th>Purpose</th></tr>
+      <tr><td><span class="mono">IP Address</span></td><td>192.168.1.101</td><td>Device's unique identifier on the network</td></tr>
+      <tr><td><span class="mono">Subnet Mask</span></td><td>255.255.255.0</td><td>Defines the size of the network</td></tr>
+      <tr><td><span class="mono">Default Gateway</span></td><td>192.168.1.1</td><td>Router IP — how to reach the internet</td></tr>
+      <tr><td><span class="mono">DNS Server</span></td><td>192.168.1.1 (DC)</td><td>Where to resolve names</td></tr>
+      <tr><td><span class="mono">Lease Duration</span></td><td>8 days</td><td>How long the device keeps this IP</td></tr>
+    </table>
+
+    <h3 style="color:var(--accent2)">Install DHCP via Server Manager (GUI)</h3>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num-badge orange">1</div>
+        <div class="step-content">
+          <h4>Open Server Manager</h4>
+          <p>Should already be open. If not: Start → Server Manager (it's pinned to the taskbar).</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">2</div>
+        <div class="step-content">
+          <h4>Add Roles and Features</h4>
+          <p>Click <strong>"Manage"</strong> (top right) → <strong>"Add Roles and Features"</strong></p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">3</div>
+        <div class="step-content">
+          <h4>Step through the wizard</h4>
+          <p>Click Next → Next → Select your server → Check <strong>"DHCP Server"</strong> → click "Add Features" in the popup → Next → Next → Install</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">4</div>
+        <div class="step-content">
+          <h4>Wait for Installation</h4>
+          <p>Takes 1-2 minutes. You'll see "Installation succeeded." Do NOT restart yet — the next step requires a post-install configuration.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">5</div>
+        <div class="step-content">
+          <h4>Complete DHCP Configuration</h4>
+          <p>A yellow flag appears in Server Manager (top right bell icon). Click it → <strong>"Complete DHCP configuration"</strong> → Next → Commit. This creates the DHCP Administrators and DHCP Users local security groups.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="color:var(--accent2)">Install DHCP via PowerShell (Faster)</h3>
+    <div class="code-label">PowerShell — Run as Administrator</div>
+    <div class="code-block">
+      <span class="comment"># Install the DHCP Server role</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Install-WindowsFeature</span> <span class="keyword">-Name</span> <span class="string">DHCP</span> <span class="keyword">-IncludeManagementTools</span><br><br>
+      <span class="comment"># Verify it installed successfully</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Get-WindowsFeature</span> <span class="keyword">-Name</span> <span class="string">DHCP</span><br><br>
+      <span class="comment"># Complete post-install config (creates security groups)</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Add-DhcpServerInDC</span> <span class="keyword">-DnsName</span> <span class="string">"DC01.company.local"</span> <span class="keyword">-IPAddress</span> <span class="string">"192.168.1.1"</span>
+    </div>
+
+    <div class="tip">
+      <strong>💡 Where to install DHCP?</strong> In small environments, install DHCP on your Domain Controller. In larger networks, it's better practice to put it on a separate member server. But for labs and small offices, the DC is perfectly fine.
+    </div>
+  </div>
+
+  <!-- SECTION 3: IP Pool -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <div class="section-icon icon-orange">🏊</div>
+      <div>
+        <h2>Creating an IP Pool (Scope)</h2>
+        <p style="margin:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted)">Define the range of IPs DHCP can hand out</p>
+      </div>
+    </div>
+
+    <div class="card highlight-orange">
+      <h3 style="margin-top:0; color:var(--accent2)">What is a DHCP Scope?</h3>
+      <p>A <strong>Scope</strong> is a pool of IP addresses that the DHCP server manages and hands out. You define the start IP, the end IP, the subnet mask, and any exclusions (IPs to skip).</p>
+      <p>Example: "Hand out IPs from 192.168.1.100 to 192.168.1.200. Skip 192.168.1.150 because that's reserved for the printer."</p>
+    </div>
+
+    <h3 style="color:var(--accent2)">Plan Your IP Range First</h3>
+    <p>Before creating a scope, plan your address space. Here's a typical small office layout:</p>
+    <table>
+      <tr><th>Range</th><th>Purpose</th></tr>
+      <tr><td><span class="mono">192.168.1.1 – 192.168.1.10</span></td><td>Network infrastructure (router, switches)</td></tr>
+      <tr><td><span class="mono">192.168.1.11 – 192.168.1.50</span></td><td>Servers (static/manually assigned)</td></tr>
+      <tr><td><span class="mono">192.168.1.51 – 192.168.1.99</span></td><td>Printers & static devices</td></tr>
+      <tr><td><span class="mono" style="color:var(--accent2)">192.168.1.100 – 192.168.1.200</span></td><td>DHCP pool for workstations ← This is your scope</td></tr>
+      <tr><td><span class="mono">192.168.1.201 – 192.168.1.254</span></td><td>Spare / future use</td></tr>
+    </table>
+
+    <h3 style="color:var(--accent2)">Create a Scope via DHCP Manager (GUI)</h3>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num-badge orange">1</div>
+        <div class="step-content">
+          <h4>Open DHCP Manager</h4>
+          <p>Start → Windows Administrative Tools → DHCP. Or press Win+R → <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">dhcpmgmt.msc</code></p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">2</div>
+        <div class="step-content">
+          <h4>Right-click IPv4 → New Scope</h4>
+          <p>Expand your server → right-click <strong>IPv4</strong> → <strong>New Scope…</strong></p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">3</div>
+        <div class="step-content">
+          <h4>Name the Scope</h4>
+          <p>Give it a descriptive name like <strong>"Office Workstations"</strong> and optional description.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">4</div>
+        <div class="step-content">
+          <h4>Set IP Range</h4>
+          <p>Start IP: <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">192.168.1.100</code> &nbsp; End IP: <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">192.168.1.200</code> &nbsp; Mask: <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">255.255.255.0</code></p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">5</div>
+        <div class="step-content">
+          <h4>Add Exclusions (optional)</h4>
+          <p>If any IPs in that range are already used (e.g., you manually set a device to 192.168.1.150), add them as exclusions so DHCP won't hand them out.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">6</div>
+        <div class="step-content">
+          <h4>Set Lease Duration</h4>
+          <p>Default is 8 days. Fine for most offices. For guest WiFi or cafes, use 2-4 hours. Longer leases = less network traffic. Shorter = IPs return to pool faster.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">7</div>
+        <div class="step-content">
+          <h4>Configure Scope Options</h4>
+          <p>Select "Yes" to configure now → Enter: <br>
+          Router (gateway): <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">192.168.1.1</code><br>
+          DNS Server: <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">192.168.1.1</code> (your DC)</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge orange">8</div>
+        <div class="step-content">
+          <h4>Activate the Scope</h4>
+          <p>Select "Yes, I want to activate this scope now." Click Finish. The scope is now live!</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="color:var(--accent2)">Create a Scope via PowerShell</h3>
+    <div class="code-label">PowerShell — All in one go</div>
+    <div class="code-block">
+      <span class="comment"># Create the scope</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Add-DhcpServerv4Scope</span> <span class="keyword">-Name</span> <span class="string">"Office Workstations"</span> <span class="keyword">-StartRange</span> <span class="string">"192.168.1.100"</span> <span class="keyword">-EndRange</span> <span class="string">"192.168.1.200"</span> <span class="keyword">-SubnetMask</span> <span class="string">"255.255.255.0"</span> <span class="keyword">-State</span> <span class="string">Active</span><br><br>
+      <span class="comment"># Set scope options (Gateway + DNS)</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Set-DhcpServerv4OptionValue</span> <span class="keyword">-ScopeId</span> <span class="string">"192.168.1.0"</span> <span class="keyword">-Router</span> <span class="string">"192.168.1.1"</span> <span class="keyword">-DnsServer</span> <span class="string">"192.168.1.1"</span> <span class="keyword">-DnsDomain</span> <span class="string">"company.local"</span><br><br>
+      <span class="comment"># Verify the scope exists</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Get-DhcpServerv4Scope</span>
+    </div>
+
+    <div class="tip">
+      <strong>💡 DHCP Reservations:</strong> Want a device to always get the same IP but still use DHCP? Create a <strong>reservation</strong> — you tie the device's MAC address to a specific IP. The device still uses DHCP, but always receives the same IP. Best of both worlds!
+    </div>
+    <div class="code-block">
+      <span class="comment"># Create a reservation for a printer (tie MAC to IP)</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Add-DhcpServerv4Reservation</span> <span class="keyword">-ScopeId</span> <span class="string">"192.168.1.0"</span> <span class="keyword">-IPAddress</span> <span class="string">"192.168.1.150"</span> <span class="keyword">-ClientId</span> <span class="string">"AA-BB-CC-DD-EE-FF"</span> <span class="keyword">-Description</span> <span class="string">"Reception Printer"</span>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Authorize DHCP -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <div class="section-icon icon-green">✅</div>
+      <div>
+        <h2>Authorizing DHCP in the Domain</h2>
+        <p style="margin:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted)">Security mechanism to prevent rogue DHCP servers</p>
+      </div>
+    </div>
+
+    <div class="card highlight-green">
+      <h3 style="margin-top:0; color:var(--accent3)">Why Does DHCP Need Authorization?</h3>
+      <p>Imagine someone plugs a personal router into your office network. That router has its own DHCP server and starts handing out wrong IP addresses to your computers — pointing DNS to the wrong server, hijacking internet traffic, or causing IP conflicts. This is called a <strong>Rogue DHCP Server</strong>.</p>
+      <p>Microsoft's solution: in an Active Directory domain, DHCP servers must be <strong>authorized</strong> in Active Directory before they'll hand out any leases. Unauthorized DHCP servers are automatically suppressed.</p>
+    </div>
+
+    <h3 style="color:var(--accent3)">How Authorization Works</h3>
+    <div class="flow" style="flex-wrap:wrap; gap:10px;">
+      <div class="flow-step" style="min-width:140px">
+        <div class="step-num">①</div>
+        <div class="step-label">DHCP Starts</div>
+        <div class="step-desc">Server checks if it's in a domain</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" style="min-width:140px">
+        <div class="step-num">②</div>
+        <div class="step-label">Queries AD</div>
+        <div class="step-desc">"Am I on the authorized list?"</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" style="min-width:140px; border-color:rgba(127,255,107,0.3)">
+        <div class="step-num">✓</div>
+        <div class="step-label" style="color:var(--accent3)">Authorized</div>
+        <div class="step-desc">Starts handing out leases</div>
+      </div>
+      <div class="flow-arrow" style="color:var(--accent2)">or</div>
+      <div class="flow-step" style="min-width:140px; border-color:rgba(255,107,53,0.3)">
+        <div class="step-num">✗</div>
+        <div class="step-label" style="color:var(--accent2)">Unauthorized</div>
+        <div class="step-desc">Shuts down immediately</div>
+      </div>
+    </div>
+
+    <h3 style="color:var(--accent3)">Authorize via DHCP Manager (GUI)</h3>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num-badge blue">1</div>
+        <div class="step-content">
+          <h4>Open DHCP Manager</h4>
+          <p>Win+R → <code style="font-family:'JetBrains Mono',monospace; color:var(--accent)">dhcpmgmt.msc</code></p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge blue">2</div>
+        <div class="step-content">
+          <h4>Look for the Red Arrow (unauthorized)</h4>
+          <p>An unauthorized server shows a <strong>red down-arrow</strong> icon next to its name. An authorized server shows a <strong>green up-arrow</strong>.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num-badge blue">3</div>
+        <div class="step-content">
+          <h4>Authorize</h4>
+          <p>Right-click on your server name (at the top of the tree) → <strong>Authorize</strong>. Wait a few seconds, then press F5 to refresh — the arrow should turn green.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="color:var(--accent3)">Authorize via PowerShell</h3>
+    <div class="code-label">PowerShell — Run as Domain Admin</div>
+    <div class="code-block">
+      <span class="comment"># Authorize the DHCP server in AD</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Add-DhcpServerInDC</span> <span class="keyword">-DnsName</span> <span class="string">"DC01.company.local"</span> <span class="keyword">-IPAddress</span> <span class="string">"192.168.1.1"</span><br><br>
+      <span class="comment"># Verify which DHCP servers are authorized in the domain</span><br>
+      <span class="prompt">PS C:\></span> <span class="cmd">Get-DhcpServerInDC</span><br><br>
+      <span class="comment"># Expected output:</span><br>
+      <span class="comment"># IPAddress     DnsName</span><br>
+      <span class="comment"># ---------     -------</span><br>
+      <span class="comment"># 192.168.1.1   DC01.company.local</span>
+    </div>
+
+    <h3 style="color:var(--accent3)">Testing That Everything Works</h3>
+    <div class="code-label">On a Client PC — Command Prompt</div>
+    <div class="code-block">
+      <span class="comment"># Release current IP and request a new one from DHCP</span><br>
+      <span class="prompt">C:\></span> <span class="cmd">ipconfig /release</span><br>
+      <span class="prompt">C:\></span> <span class="cmd">ipconfig /renew</span><br><br>
+      <span class="comment"># Show your IP configuration — confirm you got an IP in your scope range</span><br>
+      <span class="prompt">C:\></span> <span class="cmd">ipconfig /all</span><br><br>
+      <span class="comment"># You should see:</span><br>
+      <span class="comment"># IPv4 Address: 192.168.1.101 (from your scope!)</span><br>
+      <span class="comment"># DHCP Server: 192.168.1.1 (your DC)</span><br>
+      <span class="comment"># DNS Servers: 192.168.1.1</span>
+    </div>
+
+    <div class="tip">
+      <strong>💡 View Active Leases:</strong> In DHCP Manager, expand your scope → <strong>Address Leases</strong>. You'll see every device that has received an IP, their MAC address, and when the lease expires. This is incredibly useful for network troubleshooting.
+    </div>
+
+    <h3 style="color:var(--accent3)">Quick Reference — Common DHCP Issues</h3>
+    <table>
+      <tr><th>Problem</th><th>Likely Cause</th><th>Fix</th></tr>
+      <tr><td>Client gets 169.254.x.x IP</td><td>No DHCP server found (APIPA)</td><td>Check DHCP service is running; check authorization</td></tr>
+      <tr><td>DHCP not handing out IPs</td><td>Server not authorized, or scope not activated</td><td>Authorize in AD, activate scope</td></tr>
+      <tr><td>IP conflict errors</td><td>Static IP device within DHCP range</td><td>Add exclusion for that IP in the scope</td></tr>
+      <tr><td>Wrong DNS pushed to clients</td><td>Scope option misconfigured</td><td>Check scope options → DNS server setting</td></tr>
+    </table>
+
+    <div class="card" style="margin-top:32px; background: rgba(127,255,107,0.04); border-color:rgba(127,255,107,0.2); text-align:center">
+      <div style="font-size:2rem; margin-bottom:8px">🎉</div>
+      <h3 style="color:var(--accent3); margin:0 0 8px">You've completed Module 3!</h3>
+      <p style="margin:0; font-size:14px;">DNS resolves names → A records map hosts → DHCP installs as a role → Scope defines the IP pool → Authorization secures it in AD. You now understand the two most fundamental network services in any Windows environment.</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
